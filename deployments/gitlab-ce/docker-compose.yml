@@ -1,0 +1,17 @@
+version: '3'
+services:
+  gitlab:
+    image: 'gitlab/gitlab-ce:latest'
+    restart: always
+    hostname: 'git.bbpp.online'
+    environment:
+      GITLAB_OMNIBUS_CONFIG: |
+        external_url 'https://git.bbpp.online' # 同样需要替换成你自己的域名或IP地址
+    ports:
+      - '8888:80'
+      - '8443:443'
+      - '822:22'
+    volumes:
+      - '/srv/gitlab/config:/etc/gitlab'
+      - '/srv/gitlab/logs:/var/log/gitlab'
+      - '/srv/gitlab/data:/var/opt/gitlab'
