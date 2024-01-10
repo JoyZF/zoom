@@ -1,3 +1,7 @@
+# Copyright 2024 Joy <joyssss94@gmail.com>. All rights reserved.
+# Use of this source code is governed by a MIT style
+# license that can be found in the LICENSE file.
+
 version: '3'
 services:
   gitlab:
@@ -6,7 +10,7 @@ services:
     hostname: 'git.bbpp.online'
     environment:
       GITLAB_OMNIBUS_CONFIG: |
-        external_url 'https://git.bbpp.online' # 同样需要替换成你自己的域名或IP地址
+        external_url 'https://git.bbpp.online'
     ports:
       - '8888:80'
       - '8443:443'
