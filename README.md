@@ -20,6 +20,17 @@
 ## 文档备注
 [project-layout](https://github.com/golang-standards/project-layout)
 
+生成swagger API文档 推送到在线文档。
+
+错误码
+### 功能模块
+- [ ] KV存储
+- [ ] HTTP 服务
+- [ ] 权限管理
+- [ ] 日志管理
+- [ ] web ui
+- [ ] cli
+
 ## 功能特性
 ## 软件架构
 ## 快速开始
