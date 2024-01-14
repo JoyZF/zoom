@@ -1,7 +1,6 @@
 package apiserver
 
 import (
-	"github.com/JoyZF/errors"
 	"github.com/JoyZF/zoom/internal/pkg/code"
 	"github.com/JoyZF/zoom/internal/pkg/middleware"
 	"github.com/gin-gonic/gin"
@@ -21,7 +20,7 @@ func installController(g *gin.Engine) *gin.Engine {
 	// Middlewares.
 	auto := newAutoAuth()
 	g.NoRoute(auto.AuthFunc(), func(c *gin.Context) {
-		core.WriteResponse(c, errors.WithCode(code.NotFound, code.GetMsg(code.NotFound, code.ZH_CN)), nil)
+		core.WriteResponse(c, code.ErrorWithCode(c, code.NotFound), nil)
 	})
 
 	// v1 handlers, requiring authentication

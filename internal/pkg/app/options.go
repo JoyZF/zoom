@@ -1,5 +1,5 @@
 package app
 
-type CliOptions interface {
+type Optioners interface {
 	Validate() []error
 }

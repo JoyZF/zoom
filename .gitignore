@@ -335,7 +335,7 @@ flycheck_*.el
 # Output of backend and frontend
 /_output
 /_debug
-
+./logs
 # Misc
 .DS_Store
 *.env
