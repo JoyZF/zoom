@@ -16,6 +16,7 @@ func NewApp(basename string) *app.App {
 		app.WithOptions(opts),
 		app.WithDescription(commandDesc),
 		app.WithRunFunc(run(opts))) // FIXME WithRunFunc 很容易忽略掉
+
 	return app
 }
 

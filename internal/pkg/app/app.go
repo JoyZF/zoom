@@ -83,7 +83,8 @@ func NewApp(name, basename string, opts ...Option) *App {
 	for _, o := range opts {
 		o(&a)
 	}
-	a.buildCommand()
+	// TODO 暂时不需要使用cmd
+	//a.buildCommand()
 	return &a
 }
 
@@ -116,9 +117,12 @@ func FormatBaseName(basename string) string {
 }
 
 func (a *App) Run() {
-	if err := a.cmd.Execute(); err != nil {
-		zlog.Fatalf("%v %v\n", color.RedString("Error:"), err)
+	fmt.Println(fmt.Sprintf("%s service is running", a.basename))
+	for {
 	}
+	//if err := a.cmd.Execute(); err != nil {
+	//	zlog.Fatalf("%v %v\n", color.RedString("Error:"), err)
+	//}
 }
 
 func (a *App) buildCommand() {

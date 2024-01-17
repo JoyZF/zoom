@@ -16,6 +16,15 @@
 - 单元测试
 - CI/CD
 - 容器化
+![](https://static001.geekbang.org/resource/image/8a/c7/8a94938bc087ed96d0ec87261db292c7.jpg?wh=4770x1487)
+
+微服务体系应用q
+- 限流
+- 熔断
+- 降级
+- 隔离
+- 负载均衡
+- failover
 
 ## 文档备注
 [project-layout](https://github.com/golang-standards/project-layout)
