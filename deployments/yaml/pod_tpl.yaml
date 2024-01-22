@@ -1,0 +1,75 @@
+apiVersion: v1   # 必须 版本号， 常用v1  apps/v1
+kind: Pod   # 必须
+metadata:  # 必须，元数据
+  name: string  # 必须，名称
+  namespace: string # 必须，命名空间，默认上default,生产环境为了安全性建议新建命名空间分类存放
+  labels:   # 非必须，标签，列表值
+    - name: string
+  annotations:  # 非必须，注解，列表值
+    - name: string
+spec:  # 必须，容器的详细定义
+  containers:  #必须，容器列表，
+    - name: string　　　#必须，容器1的名称
+      image: string    #必须，容器1所用的镜像
+      imagePullPolicy: [Always|Never|IfNotPresent]  #非必须，镜像拉取策略，默认是Always
+      command: [string]  # 非必须 列表值，如果不指定，则是一镜像打包时使用的启动命令
+      args:　[string] # 非必须，启动参数
+      workingDir: string # 非必须，容器内的工作目录
+      volumeMounts: # 非必须，挂载到容器内的存储卷配置
+        - name: string  # 非必须，存储卷名字，需与【@1】处定义的名字一致
+          readOnly: boolean #非必须，定义读写模式，默认是读写
+      ports: # 非必须，需要暴露的端口
+        - name: string  # 非必须 端口名称
+          containerPort: int  # 非必须 端口号
+          hostPort: int # 非必须 宿主机需要监听的端口号，设置此值时，同一台宿主机不能存在同一端口号的pod， 建议不要设置此值
+          proctocol: [tcp|udp]  # 非必须 端口使用的协议，默认是tcp
+      env: # 非必须 环境变量
+        - name: string # 非必须 ，环境变量名称
+          value: string  # 非必须，环境变量键值对
+      resources:  # 非必须，资源限制
+        limits:  # 非必须，限制的容器使用资源的最大值，超过此值容器会推出
+          cpu: string # 非必须，cpu资源，单位是core，从0.1开始
+          memory: string 内存限制，单位为MiB,GiB
+        requests:  # 非必须，启动时分配的资源
+          cpu: string
+          memory: string
+      livenessProbe:   # 非必须，容器健康检查的探针探测方式
+        exec: # 探测命令
+          command: [string] # 探测命令或者脚本
+        httpGet: # httpGet方式
+          path: string  # 探测路径，例如 http://ip:port/path
+          port: number
+          host: string
+          scheme: string
+          httpHeaders:
+            - name: string
+              value: string
+          tcpSocket:  # tcpSocket方式，检查端口是否存在
+            port: number
+          initialDelaySeconds: 0 #容器启动完成多少秒后的再进行首次探测，单位为s
+          timeoutSeconds: 0  #探测响应超时的时间,默认是1s,如果失败，则认为容器不健康，会重启该容器
+          periodSeconds: 0  # 探测间隔时间，默认是10s
+          successThreshold: 0  #
+          failureThreshold: 0
+        securityContext:
+          privileged: false
+        restartPolicy: [Always|Never|OnFailure]  # 容器重启的策略，
+        nodeSelector: object  # 指定运行的宿主机
+        imagePullSecrets:  # 容器下载时使用的Secrets名称，需要与valumes.secret中定义的一致
+          - name: string
+        hostNetwork: false
+        volumes: ## 挂载的共享存储卷类型
+          - name: string  # 非必须，【@1】
+          emptyDir: {}
+          hostPath:
+            path: string
+          secret:  # 类型为secret的存储卷，使用内部的secret内的items值作为环境变量
+            secrectName: string
+            items:
+              - key: string
+                path: string
+            configMap:  ## 类型为configMap的存储卷
+              name: string
+              items:
+                - key: string
+                  path: string
