@@ -18,7 +18,7 @@
 - 容器化
 ![](https://static001.geekbang.org/resource/image/8a/c7/8a94938bc087ed96d0ec87261db292c7.jpg?wh=4770x1487)
 
-微服务体系应用q
+微服务体系应用
 - 限流
 - 熔断
 - 降级
@@ -31,7 +31,14 @@
 
 生成swagger API文档 推送到在线文档。
 
-错误码
+## TODO
+前置需要去了解的组建
+- [x] caron
+- [ ] VIPER
+- [x] gin
+
+![rose db UML](docs/rosedb-0.png)
+
 ### 功能模块
 - [ ] KV存储
 - [ ] HTTP 服务

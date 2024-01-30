@@ -4,8 +4,10 @@ go 1.21.5
 
 require (
 	github.com/JoyZF/errors v1.0.0
+	github.com/JoyZF/wal v0.0.0-20240126091116-983f5d30dced
 	github.com/JoyZF/zlog v0.0.2
 	github.com/asaskevich/govalidator v0.0.0-20210307081110-f21760c49a8d
+	github.com/bwmarrin/snowflake v0.3.0
 	github.com/fatih/color v1.13.0
 	github.com/gin-contrib/cors v1.3.1
 	github.com/gin-contrib/pprof v1.4.0
@@ -13,13 +15,15 @@ require (
 	github.com/gosuri/uitable v0.0.4
 	github.com/marmotedu/component-base v1.6.2
 	github.com/marmotedu/errors v1.0.2
-	github.com/marmotedu/iam v1.7.0
+	github.com/marmotedu/iam v1.6.3
 	github.com/mattn/go-isatty v0.0.14
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/satori/go.uuid v1.2.1-0.20181028125025-b2ce2384e17b
 	github.com/spf13/cobra v1.8.0
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.9.0
 	github.com/tpkeeper/gin-dump v1.0.1
+	github.com/valyala/bytebufferpool v1.0.0
 	github.com/zsais/go-gin-prometheus v0.1.0
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.41.0
@@ -40,6 +44,7 @@ require (
 	github.com/go-sql-driver/mysql v1.6.0 // indirect
 	github.com/goccy/go-json v0.9.7 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect
