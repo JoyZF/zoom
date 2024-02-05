@@ -1,10 +1,15 @@
+// Copyright 2024 Joy <joyssss94@gmail.com>. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package index
 
 import (
 	"bytes"
+	"sync"
+
 	"github.com/JoyZF/wal"
 	"github.com/google/btree"
-	"sync"
 )
 
 // MemoryBTree is a memory based btree implementation of the Index interface
@@ -65,7 +70,10 @@ func (mt *MemoryBTree) Ascend(handleFn func(key []byte, position *wal.ChunkPosit
 	})
 }
 
-func (mt *MemoryBTree) AscendRange(startKey, endKey []byte, handleFn func(key []byte, position *wal.ChunkPosition) (bool, error)) {
+func (mt *MemoryBTree) AscendRange(
+	startKey, endKey []byte,
+	handleFn func(key []byte, position *wal.ChunkPosition) (bool, error),
+) {
 	mt.lock.RLock()
 	defer mt.lock.RUnlock()
 
@@ -78,7 +86,10 @@ func (mt *MemoryBTree) AscendRange(startKey, endKey []byte, handleFn func(key []
 	})
 }
 
-func (mt *MemoryBTree) AscendGreaterOrEqual(key []byte, handleFn func(key []byte, position *wal.ChunkPosition) (bool, error)) {
+func (mt *MemoryBTree) AscendGreaterOrEqual(
+	key []byte,
+	handleFn func(key []byte, position *wal.ChunkPosition) (bool, error),
+) {
 	mt.lock.RLock()
 	defer mt.lock.RUnlock()
 
@@ -104,7 +115,10 @@ func (mt *MemoryBTree) Descend(handleFn func(key []byte, pos *wal.ChunkPosition)
 	})
 }
 
-func (mt *MemoryBTree) DescendRange(startKey, endKey []byte, handleFn func(key []byte, position *wal.ChunkPosition) (bool, error)) {
+func (mt *MemoryBTree) DescendRange(
+	startKey, endKey []byte,
+	handleFn func(key []byte, position *wal.ChunkPosition) (bool, error),
+) {
 	mt.lock.RLock()
 	defer mt.lock.RUnlock()
 
@@ -117,7 +131,10 @@ func (mt *MemoryBTree) DescendRange(startKey, endKey []byte, handleFn func(key [
 	})
 }
 
-func (mt *MemoryBTree) DescendLessOrEqual(key []byte, handleFn func(key []byte, position *wal.ChunkPosition) (bool, error)) {
+func (mt *MemoryBTree) DescendLessOrEqual(
+	key []byte,
+	handleFn func(key []byte, position *wal.ChunkPosition) (bool, error),
+) {
 	mt.lock.RLock()
 	defer mt.lock.RUnlock()
 

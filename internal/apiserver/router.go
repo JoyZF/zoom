@@ -1,11 +1,16 @@
+// Copyright 2024 Joy <joyssss94@gmail.com>. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package apiserver
 
 import (
+	"github.com/JoyZF/zoom/internal/apiserver/controller/v1/store"
+	"github.com/gin-gonic/gin"
+
 	"github.com/JoyZF/zoom/internal/pkg/code"
 	"github.com/JoyZF/zoom/internal/pkg/middleware"
-	"github.com/gin-gonic/gin"
-	"github.com/marmotedu/component-base/pkg/core"
-	"net/http"
+	"github.com/JoyZF/zoom/internal/pkg/response"
 )
 
 func initRouter(g *gin.Engine) {
@@ -13,22 +18,26 @@ func initRouter(g *gin.Engine) {
 	installController(g)
 }
 
+// installMiddleware 额外注册中间件入口
 func installMiddleware(g *gin.Engine) {
+
 }
 
 func installController(g *gin.Engine) *gin.Engine {
-	// Middlewares.
-	auto := newAutoAuth()
-	g.NoRoute(auto.AuthFunc(), func(c *gin.Context) {
-		core.WriteResponse(c, code.ErrorWithCode(c, code.NotFound), nil)
+	g.NoRoute(func(ctx *gin.Context) {
+		response.WriteResponse(ctx, code.ErrorWithCode(ctx, code.NotFound), nil)
 	})
 
 	// v1 handlers, requiring authentication
 	v1 := g.Group("/v1")
 	{
-		v1.GET("/index", func(ctx *gin.Context) {
-			ctx.JSON(http.StatusOK, "init")
-		})
+		sc := store.NewStoreController()
+		v1.GET("/store", sc.Get)
+		v1.PUT("/store", sc.Put)
+		v1.PUT("/store/ttl", sc.PutWithTTL)
+		v1.DELETE("/store", sc.Delete)
+		v1.GET("/store/ttl", sc.TTL)
+		// TODO 续约 、 重排序、pop
 	}
 
 	return g

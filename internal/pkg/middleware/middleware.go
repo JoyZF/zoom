@@ -63,5 +63,6 @@ func defaultMiddlewares() map[string]gin.HandlerFunc {
 		"requestid": RequestID(),
 		"logger":    Logger(),
 		"dump":      gindump.Dump(),
+		"i118":      I118(),
 	}
 }

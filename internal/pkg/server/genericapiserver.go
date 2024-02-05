@@ -8,11 +8,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/JoyZF/zoom/internal/pkg/middleware"
-	"github.com/marmotedu/iam/pkg/log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/marmotedu/iam/pkg/log"
+
+	"github.com/JoyZF/zoom/internal/pkg/middleware"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
@@ -129,15 +131,6 @@ func (s *GenericAPIServer) Run() error {
 		MaxHeaderBytes: 1 << 20,
 	}
 
-	// For scalability, use custom HTTP configuration mode here
-	s.secureServer = &http.Server{
-		Addr:           s.SecureServingInfo.Address(),
-		Handler:        s,
-		ReadTimeout:    10 * time.Second,
-		WriteTimeout:   10 * time.Second,
-		MaxHeaderBytes: 1 << 20,
-	}
-
 	var eg errgroup.Group
 
 	// Initializing the server in a goroutine so that
@@ -152,25 +145,6 @@ func (s *GenericAPIServer) Run() error {
 		}
 
 		log.Infof("Server on %s stopped", s.InsecureServingInfo.Address)
-
-		return nil
-	})
-
-	eg.Go(func() error {
-		key, cert := s.SecureServingInfo.CertKey.KeyFile, s.SecureServingInfo.CertKey.CertFile
-		if cert == "" || key == "" || s.SecureServingInfo.BindPort == 0 {
-			return nil
-		}
-
-		log.Infof("Start to listening the incoming requests on https address: %s", s.SecureServingInfo.Address())
-
-		if err := s.secureServer.ListenAndServeTLS(cert, key); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatal(err.Error())
-
-			return err
-		}
-
-		log.Infof("Server on %s stopped", s.SecureServingInfo.Address())
 
 		return nil
 	})

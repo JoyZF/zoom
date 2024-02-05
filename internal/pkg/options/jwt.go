@@ -6,8 +6,9 @@ package options
 
 import (
 	"fmt"
-	"github.com/JoyZF/zoom/internal/pkg/server"
 	"time"
+
+	"github.com/JoyZF/zoom/internal/pkg/server"
 
 	"github.com/asaskevich/govalidator"
 	"github.com/spf13/pflag"
@@ -23,24 +24,24 @@ type JwtOptions struct {
 
 // NewJwtOptions creates a JwtOptions object with default parameters.
 func NewJwtOptions() *JwtOptions {
-	defaults := server.NewConfig()
+	//defaults := server.NewConfig()
 
 	return &JwtOptions{
-		Realm:      defaults.Jwt.Realm,
-		Key:        defaults.Jwt.Key,
-		Timeout:    defaults.Jwt.Timeout,
-		MaxRefresh: defaults.Jwt.MaxRefresh,
+		//Realm:      defaults.Jwt.Realm,
+		//Key:        defaults.Jwt.Key,
+		//Timeout:    defaults.Jwt.Timeout,
+		//MaxRefresh: defaults.Jwt.MaxRefresh,
 	}
 }
 
 // ApplyTo applies the run options to the method receiver and returns self.
 func (s *JwtOptions) ApplyTo(c *server.Config) error {
-	c.Jwt = &server.JwtInfo{
-		Realm:      s.Realm,
-		Key:        s.Key,
-		Timeout:    s.Timeout,
-		MaxRefresh: s.MaxRefresh,
-	}
+	//c.Jwt = &server.JwtInfo{
+	//	Realm:      s.Realm,
+	//	Key:        s.Key,
+	//	Timeout:    s.Timeout,
+	//	MaxRefresh: s.MaxRefresh,
+	//}
 
 	return nil
 }

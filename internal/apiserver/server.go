@@ -1,18 +1,23 @@
+// Copyright 2024 Joy <joyssss94@gmail.com>. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package apiserver
 
 import (
 	"context"
 	"fmt"
+
 	"github.com/JoyZF/zlog"
-	"github.com/JoyZF/zoom/internal/apiserver/config"
-	"github.com/JoyZF/zoom/internal/apiserver/store/mysql"
-	"github.com/JoyZF/zoom/internal/pkg/options"
-	"github.com/JoyZF/zoom/internal/pkg/server"
 	"github.com/marmotedu/iam/pkg/shutdown"
 	"github.com/marmotedu/iam/pkg/shutdown/shutdownmanagers/posixsignal"
 	"github.com/marmotedu/iam/pkg/storage"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
+
+	"github.com/JoyZF/zoom/internal/apiserver/config"
+	"github.com/JoyZF/zoom/internal/pkg/options"
+	"github.com/JoyZF/zoom/internal/pkg/server"
 )
 
 type apiServer struct {
@@ -59,20 +64,17 @@ func createAPIServer(cfg *config.Config) (*apiServer, error) {
 		return nil, err
 	}
 
-	server := &apiServer{
+	s := &apiServer{
 		gs:               gs,
-		redisOptions:     cfg.RedisOptions,
 		genericAPIServer: genericServer,
 		gRPCAPIServer:    extraServer,
 	}
 
-	return server, nil
+	return s, nil
 }
 
 func (s *apiServer) PrepareRun() preparedAPIServer {
 	initRouter(s.genericAPIServer.Engine)
-
-	s.initRedisStore()
 
 	s.gs.AddShutdownCallback(shutdown.ShutdownFunc(func(string) error {
 		s.gRPCAPIServer.Close()
@@ -129,16 +131,13 @@ func buildGenericConfig(cfg *config.Config) (genericConfig *server.Config, lastE
 	if lastErr = cfg.ServerRunOptions.ApplyTo(genericConfig); lastErr != nil {
 		return
 	}
-
 	return
 }
 
 func buildExtraConfig(cfg *config.Config) (*ExtraConfig, error) {
 	return &ExtraConfig{
-		Addr:         fmt.Sprintf("%s:%d", cfg.GRPCOptions.BindAddress, cfg.GRPCOptions.BindPort),
-		MaxMsgSize:   cfg.GRPCOptions.MaxMsgSize,
-		mysqlOptions: cfg.MySQLOptions,
-		// etcdOptions:      cfg.EtcdOptions,
+		Addr:       fmt.Sprintf("%s:%d", cfg.GRPCOptions.BindAddress, cfg.GRPCOptions.BindPort),
+		MaxMsgSize: cfg.GRPCOptions.MaxMsgSize,
 	}, nil
 }
 
@@ -155,8 +154,6 @@ func (c *ExtraConfig) complete() *completedExtraConfig {
 func (c *completedExtraConfig) New() (*grpcAPIServer, error) {
 	opts := []grpc.ServerOption{grpc.MaxRecvMsgSize(c.MaxMsgSize)}
 	grpcServer := grpc.NewServer(opts...)
-
-	_, _ = mysql.GetMySQLClient(c.mysqlOptions)
 
 	reflection.Register(grpcServer)
 

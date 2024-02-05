@@ -10,10 +10,10 @@ import (
 	"os"
 	"time"
 
+	"github.com/JoyZF/zlog"
+
 	"github.com/gin-gonic/gin"
 	"github.com/mattn/go-isatty"
-
-	"github.com/marmotedu/iam/pkg/log"
 )
 
 // defaultLogFormatter is the default log format function Logger middleware uses.
@@ -130,8 +130,7 @@ func LoggerWithConfig(conf gin.LoggerConfig) gin.HandlerFunc {
 			}
 
 			param.Path = path
-
-			log.L(c).Info(formatter(param))
+			zlog.Info(formatter(param))
 		}
 	}
 }

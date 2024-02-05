@@ -7,12 +7,14 @@ package mysql
 import (
 	"context"
 	"fmt"
-	"github.com/JoyZF/zoom/internal/pkg/code"
-	"github.com/JoyZF/zoom/internal/pkg/options"
+	"sync"
+
 	"github.com/marmotedu/errors"
 	"github.com/marmotedu/iam/pkg/db"
 	"gorm.io/gorm"
-	"sync"
+
+	"github.com/JoyZF/zoom/internal/pkg/code"
+	"github.com/JoyZF/zoom/internal/pkg/options"
 )
 
 type datastore struct {

@@ -29,14 +29,10 @@ const (
 // Config is a structure used to configure a GenericAPIServer.
 // Its members are sorted roughly in order of importance for composers.
 type Config struct {
-	SecureServing   *SecureServingInfo
 	InsecureServing *InsecureServingInfo
-	Jwt             *JwtInfo
 	Mode            string
 	Middlewares     []string
 	Healthz         bool
-	EnableProfiling bool
-	EnableMetrics   bool
 }
 
 // CertKey contains configuration items related to certificate.
@@ -82,13 +78,7 @@ func NewConfig() *Config {
 		Healthz:         true,
 		Mode:            gin.ReleaseMode,
 		Middlewares:     []string{},
-		EnableProfiling: true,
-		EnableMetrics:   true,
-		Jwt: &JwtInfo{
-			Realm:      "iam jwt",
-			Timeout:    1 * time.Hour,
-			MaxRefresh: 1 * time.Hour,
-		},
+		InsecureServing: &InsecureServingInfo{},
 	}
 }
 
@@ -109,11 +99,8 @@ func (c CompletedConfig) New() (*GenericAPIServer, error) {
 	gin.SetMode(c.Mode)
 
 	s := &GenericAPIServer{
-		SecureServingInfo:   c.SecureServing,
 		InsecureServingInfo: c.InsecureServing,
 		healthz:             c.Healthz,
-		enableMetrics:       c.EnableMetrics,
-		enableProfiling:     c.EnableProfiling,
 		middlewares:         c.Middlewares,
 		Engine:              gin.New(),
 	}

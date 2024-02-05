@@ -1,7 +1,15 @@
+// Copyright 2024 Joy <joyssss94@gmail.com>. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package app
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+
 	"github.com/JoyZF/zlog"
 	"github.com/fatih/color"
 	cliflag "github.com/marmotedu/component-base/pkg/cli/flag"
@@ -10,9 +18,6 @@ import (
 	"github.com/marmotedu/component-base/pkg/version/verflag"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"runtime"
-	"strings"
 )
 
 var (
@@ -65,7 +70,6 @@ type App struct {
 	silence     bool
 	noVersion   bool
 	noConfig    bool
-	commands    []*Command
 	args        cobra.PositionalArgs
 	cmd         *cobra.Command
 }
@@ -83,8 +87,6 @@ func NewApp(name, basename string, opts ...Option) *App {
 	for _, o := range opts {
 		o(&a)
 	}
-	// TODO 暂时不需要使用cmd
-	//a.buildCommand()
 	return &a
 }
 
@@ -118,7 +120,8 @@ func FormatBaseName(basename string) string {
 
 func (a *App) Run() {
 	fmt.Println(fmt.Sprintf("%s service is running", a.basename))
-	for {
+	if err := a.runFunc(a.basename); err != nil {
+		zlog.Fatalf("%v %v\n", color.RedString("Error:"), err)
 	}
 	//if err := a.cmd.Execute(); err != nil {
 	//	zlog.Fatalf("%v %v\n", color.RedString("Error:"), err)
@@ -141,12 +144,6 @@ func (a *App) buildCommand() {
 	cmd.Flags().SortFlags = true
 	cliflag.InitFlags(cmd.Flags())
 
-	if len(a.commands) > 0 {
-		for _, command := range a.commands {
-			cmd.AddCommand(command.cobraCommand())
-		}
-		cmd.SetHelpCommand(helpCommand(FormatBaseName(a.basename)))
-	}
 	if a.runFunc != nil {
 		cmd.RunE = a.runCommand
 	}

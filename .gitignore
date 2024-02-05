@@ -35,6 +35,7 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+_output
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -332,15 +333,12 @@ flycheck_*.el
 # log
 *.log
 
-# Output of backend and frontend
-/_output
-/_debug
-./logs
+logs
+data
 # Misc
 .DS_Store
 *.env
 .env.*
-dist
 *.SEG
 
 # files used by the developer

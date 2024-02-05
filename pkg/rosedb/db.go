@@ -1,16 +1,33 @@
+// Copyright 2024 Joy <joyssss94@gmail.com>. All rights reserved.
+// Use of this source code is governed by a MIT style
+// license that can be found in the LICENSE file.
+
 package rosedb
 
 import (
-	"github.com/JoyZF/wal"
-	"github.com/JoyZF/zoom/pkg/rosedb/flock"
-	"github.com/JoyZF/zoom/pkg/rosedb/index"
-	"github.com/robfig/cron/v3"
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"path/filepath"
+	"regexp"
 	"sync"
 	"time"
+
+	"github.com/JoyZF/errors"
+	"github.com/JoyZF/wal"
+	"github.com/bwmarrin/snowflake"
+	"github.com/gofrs/flock"
+	"github.com/robfig/cron/v3"
+
+	"github.com/JoyZF/zoom/pkg/rosedb/index"
 )
 
 const (
+	fileLockName       = "FLOCK"
 	dataFileNameSuffix = ".SEG"
+	hintFileNameSuffix = ".HINT"
+	mergeFinNameSuffix = ".MERGEFIN"
 )
 
 type DB struct {
@@ -36,8 +53,109 @@ type Stat struct {
 	DiskSize int64
 }
 
+// Open a database with the specified options.
+// If the database directory does not exist, it will be created automatically.
+//
+// Multiple processes can not use the same database directory at the same time,
+// otherwise it will return ErrDatabaseIsUsing.
+//
+// It will open the wal files in the database directory and load the index from them.
+// Return the DB instance, or an error if any.
 func Open(options Options) (*DB, error) {
-	return nil, nil
+	// check options
+	if err := checkOptions(options); err != nil {
+		return nil, err
+	}
+
+	// create data directory if not exist
+	if _, err := os.Stat(options.DirPath); err != nil {
+		if err := os.MkdirAll(options.DirPath, os.ModePerm); err != nil {
+			return nil, err
+		}
+	}
+
+	// create file lock, prevent multiple processes from using the same database directory
+	fileLock := flock.New(filepath.Join(options.DirPath, fileLockName))
+	hold, err := fileLock.TryLock()
+	if err != nil {
+		return nil, err
+	}
+	if !hold {
+		return nil, ErrDatabaseIsUsing
+	}
+
+	// load merge files if exists
+	if err = loadMergeFiles(options.DirPath); err != nil {
+		return nil, err
+	}
+
+	// init DB instance
+	db := &DB{
+		index:        index.NewIndexer(),
+		options:      options,
+		fileLock:     fileLock,
+		batchPool:    sync.Pool{New: newBatch},
+		recordPool:   sync.Pool{New: newRecord},
+		encodeHeader: make([]byte, maxLogRecordHeaderSize),
+	}
+
+	// open data files
+	if db.dataFiles, err = db.openWalFiles(); err != nil {
+		return nil, err
+	}
+
+	// load index
+	if err = db.loadIndex(); err != nil {
+		return nil, err
+	}
+
+	// enable watch
+	if options.WatchQueueSize > 0 {
+		db.watchCh = make(chan *Event, 100)
+		db.watcher = NewWatcher(options.WatchQueueSize)
+		// run a goroutine to synchronize event information
+		go db.watcher.sendEvent(db.watchCh)
+	}
+
+	// enable auto merge task
+	if len(options.AutoMergeCronExpr) > 0 {
+		db.cronScheduler = cron.New(
+			cron.WithParser(
+				cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour |
+					cron.Dom | cron.Month | cron.Dow | cron.Descriptor),
+			),
+		)
+		_, err = db.cronScheduler.AddFunc(options.AutoMergeCronExpr, func() {
+			// maybe we should deal with different errors with different logic, but a background task can't omit its
+			// error.
+			// after auto merge, we should close and reopen the db.
+			_ = db.Merge(true)
+		})
+		if err != nil {
+			return nil, err
+		}
+		db.cronScheduler.Start()
+	}
+
+	return db, nil
+}
+
+func checkOptions(options Options) error {
+	if options.DirPath == "" {
+		return errors.New("database dir path is empty")
+	}
+	if options.SegmentSize <= 0 {
+		return errors.New("database data file size must be greater than 0")
+	}
+
+	if len(options.AutoMergeCronExpr) > 0 {
+		if _, err := cron.NewParser(cron.SecondOptional | cron.Minute | cron.Hour | cron.Dom | cron.Month | cron.Dow | cron.Descriptor).
+			Parse(options.AutoMergeCronExpr); err != nil {
+			return fmt.Errorf("databse auto merge cron expression is invalid, err: %s", err)
+		}
+	}
+
+	return nil
 }
 
 // openWalFiles return a *wal.WAL, error
@@ -53,8 +171,14 @@ func (db *DB) openWalFiles() (*wal.WAL, error) {
 }
 
 func (db *DB) loadIndex() error {
-	// TODO load index from hintFile
-	// TODO load index from dataFiles
+	// load index frm hint file
+	if err := db.loadIndexFromHintFile(); err != nil {
+		return err
+	}
+	// load index from data files
+	if err := db.loadIndexFromWAL(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -122,35 +246,121 @@ func (db *DB) Stat() *Stat {
 }
 
 func (db *DB) Put(key []byte, value []byte) error {
-	return nil
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	// This is a single put operation, we can set Sync to false.
+	// Because the data will be written to the WAL,
+	// and the WAL file will be synced to disk according to the DB options.
+	batch.init(false, false, db)
+	if err := batch.Put(key, value); err != nil {
+		_ = batch.Rollback()
+		return err
+	}
+	return batch.Commit()
 }
 
 func (db *DB) PutWithTTL(key []byte, value []byte, ttl time.Duration) error {
-	return nil
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	// This is a single put operation, we can set Sync to false.
+	// Because the data will be written to the WAL,
+	// and the WAL file will be synced to disk according to the DB options.
+	batch.init(false, false, db)
+	if err := batch.PutWithTTL(key, value, ttl); err != nil {
+		_ = batch.Rollback()
+		return err
+	}
+	return batch.Commit()
 }
 
 func (db *DB) Get(key []byte) ([]byte, error) {
-	return nil, nil
+	batch := db.batchPool.Get().(*Batch)
+	batch.init(true, false, db)
+	defer func() {
+		_ = batch.Commit()
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	return batch.Get(key)
 }
 
 func (db *DB) Delete(key []byte) error {
-	return nil
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	// This is a single delete operation, we can set Sync to false.
+	// Because the data will be written to the WAL,
+	// and the WAL file will be synced to disk according to the DB options.
+	batch.init(false, false, db)
+	if err := batch.Delete(key); err != nil {
+		_ = batch.Rollback()
+		return err
+	}
+	return batch.Commit()
 }
 
 func (db *DB) Exist(key []byte) (bool, error) {
-	return false, nil
+	batch := db.batchPool.Get().(*Batch)
+	batch.init(true, false, db)
+	defer func() {
+		_ = batch.Commit()
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	return batch.Exist(key)
 }
 
 func (db *DB) Expire(key []byte, ttl time.Duration) error {
-	return nil
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	// This is a single expire operation, we can set Sync to false.
+	// Because the data will be written to the WAL,
+	// and the WAL file will be synced to disk according to the DB options.
+	batch.init(false, false, db)
+	if err := batch.Expire(key, ttl); err != nil {
+		_ = batch.Rollback()
+		return err
+	}
+	return batch.Commit()
 }
 
 func (db *DB) TTL(key []byte) (time.Duration, error) {
-	return 0, nil
+	batch := db.batchPool.Get().(*Batch)
+	batch.init(true, false, db)
+	defer func() {
+		_ = batch.Commit()
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	return batch.TTL(key)
 }
 
 func (db *DB) Persist(key []byte) error {
-	return nil
+	batch := db.batchPool.Get().(*Batch)
+	defer func() {
+		batch.reset()
+		db.batchPool.Put(batch)
+	}()
+	// This is a single persist operation, we can set Sync to false.
+	// Because the data will be written to the WAL,
+	// and the WAL file will be synced to disk according to the DB options.
+	batch.init(false, false, db)
+	if err := batch.Persist(key); err != nil {
+		_ = batch.Rollback()
+		return err
+	}
+	return batch.Commit()
 }
 
 func (db *DB) Watch() (<-chan *Event, error) {
@@ -158,4 +368,313 @@ func (db *DB) Watch() (<-chan *Event, error) {
 		return nil, ErrWatchDisabled
 	}
 	return db.watchCh, nil
+}
+
+// Ascend calls handleFn for each key/value pair in the db in ascending order.
+func (db *DB) Ascend(handleFn func(k []byte, v []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	db.index.Ascend(func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		chunk, err := db.dataFiles.Read(pos)
+		if err != nil {
+			return false, err
+		}
+		if value := db.checkValue(chunk); value != nil {
+			return handleFn(key, value)
+		}
+		return true, nil
+	})
+}
+
+// AscendRange calls handleFn for each key/value pair in the db within the range [startKey, endKey] in ascending order.
+func (db *DB) AscendRange(startKey, endKey []byte, handleFn func(k []byte, v []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	db.index.AscendRange(startKey, endKey, func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		chunk, err := db.dataFiles.Read(pos)
+		if err != nil {
+			return false, nil
+		}
+		if value := db.checkValue(chunk); value != nil {
+			return handleFn(key, value)
+		}
+		return true, nil
+	})
+}
+
+// AscendGreaterOrEqual calls handleFn for each key/value pair in the db with keys greater than or equal to the given
+// key.
+func (db *DB) AscendGreaterOrEqual(key []byte, handleFn func(k []byte, v []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	db.index.AscendGreaterOrEqual(key, func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		chunk, err := db.dataFiles.Read(pos)
+		if err != nil {
+			return false, nil
+		}
+		if value := db.checkValue(chunk); value != nil {
+			return handleFn(key, value)
+		}
+		return true, nil
+	})
+}
+
+// AscendKeys calls handleFn for each key in the db in ascending order.
+// Since our expiry time is stored in the value, if you want to filter expired keys,
+// you need to set parameter filterExpired to true. But the performance will be affected.
+// Because we need to read the value of each key to determine if it is expired.
+func (db *DB) AscendKeys(pattern []byte, filterExpired bool, handleFn func(k []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	var reg *regexp.Regexp
+	if len(pattern) > 0 {
+		reg = regexp.MustCompile(string(pattern))
+	}
+
+	db.index.Ascend(func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		if reg == nil || reg.Match(key) {
+			var invalid bool
+			if filterExpired {
+				chunk, err := db.dataFiles.Read(pos)
+				if err != nil {
+					return false, err
+				}
+				if value := db.checkValue(chunk); value == nil {
+					invalid = true
+				}
+			}
+			if invalid {
+				return true, nil
+			}
+			return handleFn(key)
+		}
+		return true, nil
+	})
+}
+
+// Descend calls handleFn for each key/value pair in the db in descending order.
+func (db *DB) Descend(handleFn func(k []byte, v []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	db.index.Descend(func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		chunk, err := db.dataFiles.Read(pos)
+		if err != nil {
+			return false, nil
+		}
+		if value := db.checkValue(chunk); value != nil {
+			return handleFn(key, value)
+		}
+		return true, nil
+	})
+}
+
+// DescendRange calls handleFn for each key/value pair in the db within the range [startKey, endKey] in descending
+// order.
+func (db *DB) DescendRange(startKey, endKey []byte, handleFn func(k []byte, v []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	db.index.DescendRange(startKey, endKey, func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		chunk, err := db.dataFiles.Read(pos)
+		if err != nil {
+			return false, nil
+		}
+		if value := db.checkValue(chunk); value != nil {
+			return handleFn(key, value)
+		}
+		return true, nil
+	})
+}
+
+// DescendLessOrEqual calls handleFn for each key/value pair in the db with keys less than or equal to the given key.
+func (db *DB) DescendLessOrEqual(key []byte, handleFn func(k []byte, v []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	db.index.DescendLessOrEqual(key, func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		chunk, err := db.dataFiles.Read(pos)
+		if err != nil {
+			return false, nil
+		}
+		if value := db.checkValue(chunk); value != nil {
+			return handleFn(key, value)
+		}
+		return true, nil
+	})
+}
+
+// DescendKeys calls handleFn for each key in the db in descending order.
+// Since our expiry time is stored in the value, if you want to filter expired keys,
+// you need to set parameter filterExpired to true. But the performance will be affected.
+// Because we need to read the value of each key to determine if it is expired.
+func (db *DB) DescendKeys(pattern []byte, filterExpired bool, handleFn func(k []byte) (bool, error)) {
+	db.mu.RLock()
+	defer db.mu.RUnlock()
+
+	var reg *regexp.Regexp
+	if len(pattern) > 0 {
+		reg = regexp.MustCompile(string(pattern))
+	}
+
+	db.index.Descend(func(key []byte, pos *wal.ChunkPosition) (bool, error) {
+		if reg == nil || reg.Match(key) {
+			var invalid bool
+			if filterExpired {
+				chunk, err := db.dataFiles.Read(pos)
+				if err != nil {
+					return false, err
+				}
+				if value := db.checkValue(chunk); value == nil {
+					invalid = true
+				}
+			}
+			if invalid {
+				return true, nil
+			}
+			return handleFn(key)
+		}
+		return true, nil
+	})
+}
+
+func (db *DB) checkValue(chunk []byte) []byte {
+	record := decodeLogRecord(chunk)
+	now := time.Now().UnixNano()
+	if record.Type != LogRecordDeleted && !record.IsExpired(now) {
+		return record.Value
+	}
+	return nil
+}
+
+// loadIndexFromWAL loads index from WAL.
+// It will iterate over all the WAL files and read data
+// from them to rebuild the index.
+func (db *DB) loadIndexFromWAL() error {
+	mergeFinSegmentId, err := getMergeFinSegmentId(db.options.DirPath)
+	if err != nil {
+		return err
+	}
+	indexRecords := make(map[uint64][]*IndexRecord)
+	now := time.Now().UnixNano()
+	// get a reader for WAL
+	reader := db.dataFiles.NewReader()
+	for {
+		// if the current segment id is less than the mergeFinSegmentId,
+		// we can skip this segment because it has been merged,
+		// and we can load index from the hint file directly.
+		if reader.CurrentSegmentId() <= mergeFinSegmentId {
+			reader.SkipCurrentSegment()
+			continue
+		}
+
+		chunk, position, err := reader.Next()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+		// decode and get log record
+		record := decodeLogRecord(chunk)
+
+		// if we get the end of a batch,
+		// all records in this batch are ready to be indexed.
+		if record.Type == LogRecordBatchFinished {
+			batchId, err := snowflake.ParseBytes(record.Key)
+			if err != nil {
+				return err
+			}
+			for _, idxRecord := range indexRecords[uint64(batchId)] {
+				if idxRecord.recordType == LogRecordNormal {
+					db.index.Put(idxRecord.key, idxRecord.position)
+				}
+				if idxRecord.recordType == LogRecordDeleted {
+					db.index.Delete(idxRecord.key)
+				}
+			}
+			// delete indexRecords according to batchId after indexing
+			delete(indexRecords, uint64(batchId))
+		} else if record.Type == LogRecordNormal && record.BatchId == mergeFinishedBatchID {
+			// if the record is a normal record and the batch id is 0,
+			// it means that the record is involved in the merge operation.
+			// so put the record into index directly.
+			db.index.Put(record.Key, position)
+		} else {
+			// expired records should not be indexed
+			if record.IsExpired(now) {
+				db.index.Delete(record.Key)
+				continue
+			}
+			// put the record into the temporary indexRecords
+			indexRecords[record.BatchId] = append(indexRecords[record.BatchId],
+				&IndexRecord{
+					key:        record.Key,
+					recordType: record.Type,
+					position:   position,
+				})
+		}
+	}
+	return nil
+}
+
+// DeleteExpiredKeys scan the entire index in ascending order to delete expired keys.
+// It is a time-consuming operation, so we need to specify a timeout
+// to prevent the DB from being unavailable for a long time.
+func (db *DB) DeleteExpiredKeys(timeout time.Duration) error {
+	// set timeout
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	done := make(chan struct{}, 1)
+
+	var innerErr error
+	now := time.Now().UnixNano()
+	go func(ctx context.Context) {
+		db.mu.Lock()
+		defer db.mu.Unlock()
+		for {
+			// select 100 keys from the db.index
+			positions := make([]*wal.ChunkPosition, 0, 100)
+			db.index.AscendGreaterOrEqual(db.expiredCursorKey, func(k []byte, pos *wal.ChunkPosition) (bool, error) {
+				positions = append(positions, pos)
+				if len(positions) >= 100 {
+					return false, nil
+				}
+				return true, nil
+			})
+
+			// If keys in the db.index has been traversed, len(positions) will be 0.
+			if len(positions) == 0 {
+				db.expiredCursorKey = nil
+				done <- struct{}{}
+				return
+			}
+
+			// delete from index if the key is expired.
+			for _, pos := range positions {
+				chunk, err := db.dataFiles.Read(pos)
+				if err != nil {
+					innerErr = err
+					done <- struct{}{}
+					return
+				}
+				record := decodeLogRecord(chunk)
+				if record.IsExpired(now) {
+					db.index.Delete(record.Key)
+				}
+				db.expiredCursorKey = record.Key
+			}
+		}
+	}(ctx)
+
+	select {
+	case <-ctx.Done():
+		return innerErr
+	case <-done:
+		return nil
+	}
 }
