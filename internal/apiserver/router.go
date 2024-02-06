@@ -37,7 +37,10 @@ func installController(g *gin.Engine) *gin.Engine {
 		v1.PUT("/store/ttl", sc.PutWithTTL)
 		v1.DELETE("/store", sc.Delete)
 		v1.GET("/store/ttl", sc.TTL)
-		// TODO 续约 、 重排序、pop
+		v1.GET("/store/sync", sc.Sync)
+		v1.GET("/store/stat", sc.Stat)
+		v1.GET("/store/exist", sc.Exist)
+		v1.GET("/store/expire", sc.Expire)
 	}
 
 	return g

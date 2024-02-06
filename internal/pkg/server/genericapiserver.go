@@ -172,13 +172,10 @@ func (s *GenericAPIServer) Close() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	if err := s.secureServer.Shutdown(ctx); err != nil {
-		log.Warnf("Shutdown secure server failed: %s", err.Error())
-	}
-
 	if err := s.insecureServer.Shutdown(ctx); err != nil {
 		log.Warnf("Shutdown insecure server failed: %s", err.Error())
 	}
+	log.Infof("HTTP server on %s stopped", s.InsecureServingInfo.Address)
 }
 
 // ping pings the http server to make sure the router is working.

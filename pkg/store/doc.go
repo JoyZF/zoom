@@ -3,4 +3,4 @@
 // license that can be found in the LICENSE file.
 
 // Package pkg 对外提供引用的包
-package pkg
+package store

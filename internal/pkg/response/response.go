@@ -5,8 +5,6 @@
 package response
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/JoyZF/errors"
@@ -52,11 +50,16 @@ type errDecode struct {
 func WriteResponse(c *gin.Context, err error, data interface{}) {
 	if err != nil {
 		zlog.Errorf("%#+v", err)
-
+		var message string
 		coder := errors.ParseCoder(err)
+		if err.Error() != code.GetMsg(coder.Code(), c.GetHeader(global.LangKey)) {
+			message = err.Error()
+		} else {
+			message = code.GetMsg(coder.Code(), c.GetHeader(global.LangKey))
+		}
 		c.JSON(coder.HTTPStatus(), ErrResponse{
 			Code:      coder.Code(),
-			Message:   code.GetMsg(coder.Code(), c.GetHeader(global.LangKey)),
+			Message:   message,
 			Reference: coder.Reference(),
 		})
 
@@ -70,31 +73,4 @@ func WriteResponse(c *gin.Context, err error, data interface{}) {
 		Message: "success",
 		Data:    data,
 	})
-}
-
-// WriteResponseWithCustomErr write an error or the response data into http response body.
-// It use errors.ParseCoder to parse any error into errors.Coder
-// errors.Coder contains error code, user-safe error message and http status code.
-// if errDecode[0].err is not empty then use it as message
-func WriteResponseWithCustomErr(c *gin.Context, err error) {
-	zlog.Errorf("%#+v", err)
-	coder := errors.ParseCoder(err)
-	v := fmt.Sprintf("%#+v", err)
-	// FIXME 后续errors 暴露withcode
-	var ed []errDecode
-	_ = json.Unmarshal([]byte(v), &ed)
-	var msg string
-	if len(ed) > 0 && ed[0].Error != "" {
-		msg = ed[0].Error
-	} else {
-		msg = coder.String()
-	}
-	c.JSON(coder.HTTPStatus(), ErrResponse{
-		Code:      coder.Code(),
-		Message:   msg,
-		Reference: coder.Reference(),
-	})
-
-	return
-
 }

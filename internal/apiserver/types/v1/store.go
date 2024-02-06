@@ -1,6 +1,6 @@
 package v1
 
-type StoreGetReq struct {
+type KeyReq struct {
 	Key string `form:"key" binding:"required,max=255,min=1"`
 }
 
@@ -13,4 +13,9 @@ type StorePutWithTTLReq struct {
 	Key   string `json:"key" binding:"required,max=255,min=1"`
 	Value string `json:"value" binding:"required,max=255,min=1"`
 	TTL   int64  `json:"ttl" binding:"required"`
+}
+
+type ExpireReq struct {
+	Key string `json:"key" binding:"required,max=255,min=1"`
+	TTL int64  `json:"ttl" binding:"required"`
 }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a MIT style
 // license that can be found in the LICENSE file.
 
-package pkg
+package store
 
 import (
 	"sync"
@@ -12,11 +12,15 @@ import (
 )
 
 type DBer interface {
+	Sync() error
+	Stat() any
 	Get(key []byte) ([]byte, error)
 	Put(key, value []byte) error
 	PutWithTTL(key []byte, value []byte, ttl time.Duration) error
 	Delete(key []byte) error
 	TTL(key []byte) (time.Duration, error)
+	Exist(key []byte) (bool, error)
+	Expire(key []byte, ttl time.Duration) error
 }
 
 var (

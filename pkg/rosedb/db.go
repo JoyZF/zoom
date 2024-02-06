@@ -7,6 +7,7 @@ package rosedb
 import (
 	"context"
 	"fmt"
+	"github.com/JoyZF/zoom/utils"
 	"io"
 	"os"
 	"path/filepath"
@@ -49,7 +50,7 @@ type DB struct {
 }
 
 type Stat struct {
-	KeysNum  int64
+	KeysNum  int
 	DiskSize int64
 }
 
@@ -242,7 +243,15 @@ func (db *DB) Stat() *Stat {
 	db.mu.Lock()
 	defer db.mu.Unlock()
 
-	return &Stat{}
+	diskSize, err := utils.DirSize(db.options.DirPath)
+	if err != nil {
+		panic(fmt.Sprintf("rosedb: get database directory size error: %v", err))
+	}
+
+	return &Stat{
+		KeysNum:  db.index.Size(),
+		DiskSize: diskSize,
+	}
 }
 
 func (db *DB) Put(key []byte, value []byte) error {

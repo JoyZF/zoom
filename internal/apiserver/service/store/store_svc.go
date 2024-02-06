@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 	v1 "github.com/JoyZF/zoom/internal/apiserver/types/v1"
-	"github.com/JoyZF/zoom/pkg"
+	"github.com/JoyZF/zoom/pkg/store"
 	"time"
 )
 
@@ -15,8 +15,7 @@ func NewStore() Store {
 }
 
 func (s Store) Get(ctx context.Context, key string) (string, error) {
-	store := pkg.GetStore()
-	val, err := store.Get([]byte(key))
+	val, err := store.GetStore().Get([]byte(key))
 	if err != nil {
 		return "", err
 	}
@@ -24,18 +23,15 @@ func (s Store) Get(ctx context.Context, key string) (string, error) {
 }
 
 func (s Store) Put(ctx context.Context, req *v1.StorePutReq) error {
-	store := pkg.GetStore()
-	return store.Put([]byte(req.Key), []byte(req.Value))
+	return store.GetStore().Put([]byte(req.Key), []byte(req.Value))
 }
 
-func (s Store) Delete(ctx context.Context, req *v1.StoreGetReq) error {
-	store := pkg.GetStore()
-	return store.Delete([]byte(req.Key))
+func (s Store) Delete(ctx context.Context, req *v1.KeyReq) error {
+	return store.GetStore().Delete([]byte(req.Key))
 }
 
-func (s Store) TTL(ctx context.Context, req *v1.StoreGetReq) (int64, error) {
-	store := pkg.GetStore()
-	ttl, err := store.TTL([]byte(req.Key))
+func (s Store) TTL(ctx context.Context, req *v1.KeyReq) (int64, error) {
+	ttl, err := store.GetStore().TTL([]byte(req.Key))
 	if err != nil {
 		return 0, err
 	}
@@ -44,6 +40,22 @@ func (s Store) TTL(ctx context.Context, req *v1.StoreGetReq) (int64, error) {
 }
 
 func (s Store) PutWithTTL(ctx context.Context, req *v1.StorePutWithTTLReq) error {
-	store := pkg.GetStore()
-	return store.PutWithTTL([]byte(req.Key), []byte(req.Value), time.Duration(req.TTL)*time.Second)
+	return store.GetStore().
+		PutWithTTL([]byte(req.Key), []byte(req.Value), time.Duration(req.TTL)*time.Second)
+}
+
+func (s Store) Sync(ctx context.Context) error {
+	return store.GetStore().Sync()
+}
+
+func (s Store) Stat(ctx context.Context) any {
+	return store.GetStore().Stat()
+}
+
+func (s Store) Exist(ctx context.Context, key string) (bool, error) {
+	return store.GetStore().Exist([]byte(key))
+}
+
+func (s Store) Expire(ctx context.Context, req *v1.ExpireReq) error {
+	return store.GetStore().Expire([]byte(req.Key), time.Duration(req.TTL)*time.Second)
 }

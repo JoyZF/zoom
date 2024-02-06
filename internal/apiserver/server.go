@@ -7,8 +7,8 @@ package apiserver
 import (
 	"context"
 	"fmt"
-
 	"github.com/JoyZF/zlog"
+	"github.com/JoyZF/zoom/pkg/store"
 	"github.com/marmotedu/iam/pkg/shutdown"
 	"github.com/marmotedu/iam/pkg/shutdown/shutdownmanagers/posixsignal"
 	"github.com/marmotedu/iam/pkg/storage"
@@ -79,7 +79,7 @@ func (s *apiServer) PrepareRun() preparedAPIServer {
 	s.gs.AddShutdownCallback(shutdown.ShutdownFunc(func(string) error {
 		s.gRPCAPIServer.Close()
 		s.genericAPIServer.Close()
-
+		_ = store.GetStore().Sync()
 		return nil
 	}))
 

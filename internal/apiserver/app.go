@@ -6,13 +6,13 @@ package apiserver
 
 import (
 	"github.com/JoyZF/zlog"
+	"github.com/JoyZF/zoom/pkg/store"
 
 	"github.com/JoyZF/zoom/internal/apiserver/config"
 	"github.com/JoyZF/zoom/internal/apiserver/options"
 	"github.com/JoyZF/zoom/internal/pkg/app"
 	"github.com/JoyZF/zoom/internal/pkg/code"
 	"github.com/JoyZF/zoom/internal/pkg/log"
-	"github.com/JoyZF/zoom/pkg"
 	"github.com/JoyZF/zoom/utils"
 )
 
@@ -24,6 +24,7 @@ func init() {
 
 func NewApp(basename string) *app.App {
 	opts := options.NewOptions()
+	// TODO register cronjob to sync data
 	return app.NewApp("zoom api server",
 		basename,
 		app.WithOptions(opts),
@@ -46,7 +47,7 @@ func run(opts *options.Options) app.RunFunc {
 			zlog.Fatalf("%v", err)
 		}
 		log.Init(cfg.LogOptions)
-		if err = pkg.DB(cfg.StoreOptions.Driver); err != nil {
+		if err = store.DB(cfg.StoreOptions.Driver); err != nil {
 			zlog.Fatalf("init db driver err %+v", err)
 		}
 		return Run(cfg)

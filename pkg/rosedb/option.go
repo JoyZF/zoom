@@ -52,7 +52,7 @@ type Options struct {
 }
 
 var DefaultOptions = Options{
-	DirPath:           tempDBDir(),
+	DirPath:           "./data",
 	SegmentSize:       1 * wal.GB,
 	BlockCache:        0,
 	Sync:              false,
