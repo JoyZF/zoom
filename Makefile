@@ -49,3 +49,17 @@ cover:
 .PHONY: build
 build:
 	@$(MAKE) go.build
+
+
+## build: Run swag-fmt
+.PHONY: swag-fmt
+swag-fmt:
+	swag fmt -g cmd/zoom-apiserver/main.go
+
+## build: Run swag-init
+.PHONY: swag-init
+swag-init:
+	swag init -g cmd/zoom-apiserver/main.go
+
+.PHONY: swag
+swag: swag-fmt swag-init
