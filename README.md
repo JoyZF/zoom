@@ -6,7 +6,6 @@
 - 研发流程设计
 - 设计方法
 - 设计模式
-- API风格（RESTful、RPC）
 - 项目管理 makefile
 - 代码检查
 - API文档

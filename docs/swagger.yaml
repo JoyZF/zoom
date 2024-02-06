@@ -1,0 +1,206 @@
+basePath: /v1
+definitions:
+  response.ErrResponse:
+    properties:
+      code:
+        description: Code defines the business error code.
+        type: integer
+      message:
+        description: |-
+          Message contains the detail of this message.
+          This message is suitable to be exposed to external
+        type: string
+      reference:
+        description: Reference returns the reference document which maybe useful to
+          solve this error.
+        type: string
+    type: object
+  response.SuccessResponse:
+    properties:
+      code:
+        description: Code defines the business error code.
+        type: integer
+      data:
+        description: Data returns business data.
+      message:
+        description: |-
+          Message contains the detail of this message.
+          This message is suitable to be exposed to external
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: joyssss94@gmail.com
+    url: https://github.com/JoyZF/zoom
+  description: a kv store by web api
+  license:
+    name: Apache 2.0
+  title: zoom-api-server API
+  version: "1.0"
+paths:
+  /v1/store:
+    delete:
+      parameters:
+      - description: 键名
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: delete key
+    get:
+      parameters:
+      - description: 键名
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: get key
+    put:
+      parameters:
+      - description: 键名
+        in: body
+        name: key
+        required: true
+        schema:
+          type: string
+      - description: 键值
+        in: body
+        name: value
+        required: true
+        schema:
+          type: string
+      - description: 过期时间
+        in: body
+        name: ttl
+        required: true
+        schema:
+          type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: put kv
+  /v1/store/exist:
+    get:
+      parameters:
+      - description: 键名
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: return key is exist
+  /v1/store/expire:
+    get:
+      parameters:
+      - description: 键名
+        in: query
+        name: key
+        required: true
+        type: string
+      - description: 过期时间 单位秒
+        in: query
+        name: ttl
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: set key expire
+  /v1/store/stat:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: get db stat
+  /v1/store/sync:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: sync data to file
+  /v1/store/ttl:
+    get:
+      parameters:
+      - description: 键名
+        in: query
+        name: key
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 成功
+          schema:
+            $ref: '#/definitions/response.SuccessResponse'
+        "400":
+          description: 失败
+          schema:
+            $ref: '#/definitions/response.ErrResponse'
+      summary: get key ttl
+swagger: "2.0"

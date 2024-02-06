@@ -32,9 +32,13 @@ type ErrResponse struct {
 }
 
 type SuccessResponse struct {
-	Code    int    `json:"code"`
+	// Code defines the business error code.
+	Code int `json:"code"`
+	// Message contains the detail of this message.
+	// This message is suitable to be exposed to external
 	Message string `json:"message"`
-	Data    any    `json:"data"`
+	// Data returns business data.
+	Data any `json:"data"`
 }
 
 type errDecode struct {

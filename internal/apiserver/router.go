@@ -5,8 +5,11 @@
 package apiserver
 
 import (
+	_ "github.com/JoyZF/zoom/docs"
 	"github.com/JoyZF/zoom/internal/apiserver/controller/v1/store"
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 
 	"github.com/JoyZF/zoom/internal/pkg/code"
 	"github.com/JoyZF/zoom/internal/pkg/middleware"
@@ -27,6 +30,8 @@ func installController(g *gin.Engine) *gin.Engine {
 	g.NoRoute(func(ctx *gin.Context) {
 		response.WriteResponse(ctx, code.ErrorWithCode(ctx, code.NotFound), nil)
 	})
+	//添加swagger访问路由
+	g.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	// v1 handlers, requiring authentication
 	v1 := g.Group("/v1")

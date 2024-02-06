@@ -11,6 +11,14 @@ import (
 	"github.com/JoyZF/zoom/internal/apiserver"
 )
 
+//	@title			zoom-api-server API
+//	@version		1.0
+//	@description	a kv store by web api
+//	@license.name	Apache 2.0
+//	@contact.name	joyssss94@gmail.com
+//	@contact.url	https://github.com/JoyZF/zoom
+//	@host			localhost:8080
+//	@BasePath		/v1
 func main() {
 	rand.New(rand.NewSource(time.Now().UTC().UnixNano()))
 

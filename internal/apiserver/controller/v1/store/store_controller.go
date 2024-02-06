@@ -16,6 +16,14 @@ func NewStoreController() StoreController {
 	return StoreController{}
 }
 
+// Get
+//
+//	@Summary	get key
+//	@Produce	json
+//	@Param		key	query		string						true	"键名"
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store [get]
 func (c StoreController) Get(ctx *gin.Context) {
 	req := v1.KeyReq{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -30,6 +38,15 @@ func (c StoreController) Get(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, val)
 }
 
+// Put
+//
+//	@Summary	put kv
+//	@Produce	json
+//	@Param		key		body		string						true	"键名"
+//	@Param		value	body		string						true	"键值"
+//	@Success	200		{object}	response.SuccessResponse	"成功"
+//	@Failure	400		{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store [put]
 func (c StoreController) Put(ctx *gin.Context) {
 	req := v1.StorePutReq{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -45,6 +62,16 @@ func (c StoreController) Put(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, nil)
 }
 
+// PutWithTTL
+//
+//	@Summary	put kv
+//	@Produce	json
+//	@Param		key		body		string						true	"键名"
+//	@Param		value	body		string						true	"键值"
+//	@Param		ttl		body		int64						true	"过期时间"
+//	@Success	200		{object}	response.SuccessResponse	"成功"
+//	@Failure	400		{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store [put]
 func (c StoreController) PutWithTTL(ctx *gin.Context) {
 	req := v1.StorePutWithTTLReq{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
@@ -60,6 +87,14 @@ func (c StoreController) PutWithTTL(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, nil)
 }
 
+// Delete
+//
+//	@Summary	delete key
+//	@Produce	json
+//	@Param		key	query		string						true	"键名"
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store [delete]
 func (c StoreController) Delete(ctx *gin.Context) {
 	req := v1.KeyReq{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -75,6 +110,14 @@ func (c StoreController) Delete(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, nil)
 }
 
+// TTL
+//
+//	@Summary	get key ttl
+//	@Produce	json
+//	@Param		key	query		string						true	"键名"
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store/ttl [get]
 func (c StoreController) TTL(ctx *gin.Context) {
 	req := v1.KeyReq{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -90,6 +133,13 @@ func (c StoreController) TTL(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, ttl)
 }
 
+// Sync
+//
+//	@Summary	sync data to file
+//	@Produce	json
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store/sync [get]
 func (c StoreController) Sync(ctx *gin.Context) {
 	if err := store.NewStore().Sync(ctx); err != nil {
 		response.WriteResponse(ctx, errors.WithCode(code.GenericServiceErrorCode, err.Error()), nil)
@@ -98,11 +148,26 @@ func (c StoreController) Sync(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, nil)
 }
 
+// Stat
+//
+//	@Summary	get db stat
+//	@Produce	json
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store/stat [get]
 func (c StoreController) Stat(ctx *gin.Context) {
 	stat := store.NewStore().Stat(ctx)
 	response.WriteResponse(ctx, nil, stat)
 }
 
+// Exist
+//
+//	@Summary	return key is exist
+//	@Produce	json
+//	@Param		key	query		string						true	"键名"
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store/exist [get]
 func (c StoreController) Exist(ctx *gin.Context) {
 	req := v1.KeyReq{}
 	if err := ctx.ShouldBindQuery(&req); err != nil {
@@ -117,6 +182,15 @@ func (c StoreController) Exist(ctx *gin.Context) {
 	response.WriteResponse(ctx, nil, exist)
 }
 
+// Expire
+//
+//	@Summary	set key expire
+//	@Produce	json
+//	@Param		key	query		string						true	"键名"
+//	@Param		ttl	query		int64						true	"过期时间 单位秒"
+//	@Success	200	{object}	response.SuccessResponse	"成功"
+//	@Failure	400	{object}	response.ErrResponse		"失败"
+//	@Router		/v1/store/expire [get]
 func (c StoreController) Expire(ctx *gin.Context) {
 	req := v1.ExpireReq{}
 	if err := ctx.ShouldBindJSON(&req); err != nil {
