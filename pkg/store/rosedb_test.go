@@ -12,20 +12,20 @@ import (
 )
 
 func init() {
-	_, err := DB()
+	err := DB("ROSEDB")
 	if err != nil {
 		panic(err)
 	}
 }
 
 func TestRoseDB_Delete(t *testing.T) {
-	db, _ := DB()
+	_ = DB("ROSEDB")
 	err := db.Delete([]byte("test_del"))
 	assert.Nil(t, err)
 }
 
 func TestRoseDB_Get(t *testing.T) {
-	db, _ := DB()
+	_ = DB("ROSEDB")
 	err := db.Put([]byte("test"), []byte("test"))
 	assert.Nil(t, err)
 	bytes, err := db.Get([]byte("test"))
@@ -34,19 +34,19 @@ func TestRoseDB_Get(t *testing.T) {
 }
 
 func TestRoseDB_Put(t *testing.T) {
-	db, _ := DB()
+	_ = DB("ROSEDB")
 	err := db.Put([]byte("test"), []byte("test"))
 	assert.Nil(t, err)
 }
 
 func TestRoseDB_PutWithTTL(t *testing.T) {
-	db, _ := DB()
+	_ = DB("ROSEDB")
 	err := db.PutWithTTL([]byte("test"), []byte("test"), 60*time.Second)
 	assert.Nil(t, err)
 }
 
 func TestRoseDB_TTL(t *testing.T) {
-	db, _ := DB()
+	_ = DB("ROSEDB")
 	err := db.PutWithTTL([]byte("test"), []byte("test"), 60*time.Second)
 	assert.Nil(t, err)
 	ttl, err := db.TTL([]byte("test"))
